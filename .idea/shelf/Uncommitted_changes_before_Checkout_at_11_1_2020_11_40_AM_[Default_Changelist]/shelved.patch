@@ -1,0 +1,551 @@
+Index: app/build.gradle
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>apply plugin: 'com.android.application'\r\napply plugin: 'kotlin-android'\r\napply plugin: 'kotlin-android-extensions'\r\napply plugin: 'kotlin-kapt'\r\n\r\nandroid {\r\n    compileSdkVersion rootProject.compileSdkVersion\r\n\r\n    defaultConfig {\r\n        applicationId \"com.platzi.android.rickandmorty\"\r\n        minSdkVersion rootProject.minSdkVersion\r\n        targetSdkVersion rootProject.targetSdkVersion\r\n        versionCode rootProject.versionCode\r\n        versionName rootProject.versionName\r\n\r\n        testInstrumentationRunner \"androidx.test.runner.AndroidJUnitRunner\"\r\n    }\r\n\r\n    buildTypes {\r\n        release {\r\n            minifyEnabled false\r\n            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'\r\n        }\r\n    }\r\n\r\n    dataBinding {\r\n        enabled true\r\n    }\r\n\r\n    kotlinOptions {\r\n        jvmTarget = \"1.8\"\r\n    }\r\n\r\n    sourceSets {\r\n        main.java.srcDirs += 'src/main/java'\r\n        main.java.srcDirs += 'src/main/kotlin'\r\n        test.java.srcDirs += 'src/test/java'\r\n        test.java.srcDirs += 'src/test/kotlin'\r\n    }\r\n}\r\n\r\nandroidExtensions {\r\n    experimental = true\r\n}\r\n\r\ndependencies {\r\n    //Project\r\n    implementation project(\":data\")\r\n    implementation project(\":domain\")\r\n\r\n    //Kotlin\r\n    implementation kotlinLib\r\n\r\n    //KTX\r\n    implementation ktxLib\r\n\r\n    //Glide\r\n    implementation glideLib\r\n    annotationProcessor glideCompiler\r\n\r\n    //Gson\r\n    implementation gsonLib\r\n\r\n    //Material\r\n    implementation materialLib\r\n\r\n    //Reactive Streams\r\n    implementation reactiveStreamsLib\r\n\r\n    //Retrofit\r\n    implementation okHttpInterceptorLib\r\n    implementation retrofitRxJavaLib\r\n    implementation retrofitGsonLib\r\n\r\n    //Room\r\n    api roomLib\r\n    kapt roomCompiler\r\n    implementation roomRxJavaLib\r\n\r\n    //RxJava\r\n    implementation rxAndroidLib\r\n    implementation rxJavaLib\r\n\r\n    // View\r\n    implementation appCompatLib\r\n    implementation cardViewLib\r\n    implementation constraintLayoutLib\r\n    implementation recyclerViewLib\r\n    implementation swipeRefreshLayoutLib\r\n    implementation viewPagerLib\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/build.gradle	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ app/build.gradle	(date 1603947735944)
+@@ -47,6 +47,7 @@
+     //Project
+     implementation project(":data")
+     implementation project(":domain")
++    implementation project(":data")
+ 
+     //Kotlin
+     implementation kotlinLib
+Index: app/src/main/kotlin/com/platzi/android/rickandmorty/ui/CharacterDetailActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.platzi.android.rickandmorty.ui\r\n\r\nimport android.os.Bundle\r\nimport android.view.MenuItem\r\nimport androidx.appcompat.app.AppCompatActivity\r\nimport androidx.core.view.isVisible\r\nimport androidx.databinding.DataBindingUtil\r\nimport androidx.lifecycle.Observer\r\nimport com.platzi.android.rickandmorty.R\r\nimport com.platzi.android.rickandmorty.adapters.EpisodeListAdapter\r\nimport com.platzi.android.rickandmorty.api.APIConstants.BASE_API_URL\r\nimport com.platzi.android.rickandmorty.api.EpisodeRequest\r\nimport com.platzi.android.rickandmorty.database.CharacterDao\r\nimport com.platzi.android.rickandmorty.database.CharacterDatabase\r\nimport com.platzi.android.rickandmorty.databinding.ActivityCharacterDetailBinding\r\nimport com.platzi.android.rickandmorty.domain.Character\r\nimport com.platzi.android.rickandmorty.parcelables.CharacterParcelable\r\nimport com.platzi.android.rickandmorty.parcelables.toCharacterDomain\r\nimport com.platzi.android.rickandmorty.presentation.CharacterDetailViewModel\r\nimport com.platzi.android.rickandmorty.presentation.CharacterDetailViewModel.CharacterDetailNavigation\r\nimport com.platzi.android.rickandmorty.presentation.CharacterDetailViewModel.CharacterDetailNavigation.*\r\nimport com.platzi.android.rickandmorty.presentation.utils.Event\r\nimport com.platzi.android.rickandmorty.usecases.GetEpisodeFromCharacterUseCase\r\nimport com.platzi.android.rickandmorty.usecases.GetFavoriteCharacterStatusUseCase\r\nimport com.platzi.android.rickandmorty.usecases.UpdateFavoriteCharacterStatusUseCase\r\nimport com.platzi.android.rickandmorty.utils.Constants\r\nimport com.platzi.android.rickandmorty.utils.bindCircularImageUrl\r\nimport com.platzi.android.rickandmorty.utils.getViewModel\r\nimport com.platzi.android.rickandmorty.utils.showLongToast\r\nimport kotlinx.android.synthetic.main.activity_character_detail.*\r\n\r\nclass CharacterDetailActivity: AppCompatActivity() {\r\n\r\n    //region Fields\r\n\r\n    private lateinit var episodeListAdapter: EpisodeListAdapter\r\n    private lateinit var binding: ActivityCharacterDetailBinding\r\n\r\n    private val episodeRequest: EpisodeRequest by lazy {\r\n        EpisodeRequest(BASE_API_URL)\r\n    }\r\n\r\n    private val characterDao: CharacterDao by lazy {\r\n        CharacterDatabase.getDatabase(application).characterDao()\r\n    }\r\n\r\n    private val getEpisodeFromCharacterUseCase: GetEpisodeFromCharacterUseCase by lazy {\r\n        GetEpisodeFromCharacterUseCase(episodeRequest)\r\n    }\r\n\r\n    private val getFavoriteCharacterStatusUseCase: GetFavoriteCharacterStatusUseCase by lazy {\r\n        GetFavoriteCharacterStatusUseCase(characterDao)\r\n    }\r\n\r\n    private val updateFavoriteCharacterStatusUseCase: UpdateFavoriteCharacterStatusUseCase by lazy {\r\n        UpdateFavoriteCharacterStatusUseCase(characterDao)\r\n    }\r\n\r\n    private val characterDetailViewModel: CharacterDetailViewModel by lazy {\r\n        getViewModel {\r\n            CharacterDetailViewModel(\r\n                intent.getParcelableExtra<CharacterParcelable>(Constants.EXTRA_CHARACTER)?.toCharacterDomain(),\r\n                getEpisodeFromCharacterUseCase,\r\n                getFavoriteCharacterStatusUseCase,\r\n                updateFavoriteCharacterStatusUseCase\r\n            )\r\n        }\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Override Methods\r\n\r\n    override fun onCreate(savedInstanceState: Bundle?) {\r\n        super.onCreate(savedInstanceState)\r\n\r\n        binding = DataBindingUtil.setContentView(this, R.layout.activity_character_detail)\r\n        binding.lifecycleOwner = this@CharacterDetailActivity\r\n\r\n        episodeListAdapter = EpisodeListAdapter { episode ->\r\n            this@CharacterDetailActivity.showLongToast(\"Episode -> $episode\")\r\n        }\r\n        rvEpisodeList.adapter = episodeListAdapter\r\n\r\n        characterFavorite.setOnClickListener { characterDetailViewModel.onUpdateFavoriteCharacterStatus() }\r\n\r\n        characterDetailViewModel.characterValues.observe(this, Observer(this::loadCharacter))\r\n        characterDetailViewModel.isFavorite.observe(this, Observer(this::updateFavoriteIcon))\r\n        characterDetailViewModel.events.observe(this, Observer(this::validateEvents))\r\n\r\n        characterDetailViewModel.onCharacterValidation()\r\n    }\r\n\r\n    override fun onOptionsItemSelected(item: MenuItem): Boolean {\r\n        if (item.itemId == android.R.id.home) {\r\n            onBackPressed()\r\n            return true\r\n        }\r\n\r\n        return super.onOptionsItemSelected(item)\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Private Methods\r\n\r\n    private fun loadCharacter(character: Character){\r\n        binding.characterImage.bindCircularImageUrl(\r\n            url = character.image,\r\n            placeholder = R.drawable.ic_camera_alt_black,\r\n            errorPlaceholder = R.drawable.ic_broken_image_black\r\n        )\r\n        binding.characterDataName = character.name\r\n        binding.characterDataStatus = character.status\r\n        binding.characterDataSpecies = character.species\r\n        binding.characterDataGender = character.gender\r\n        binding.characterDataOriginName = character.origin.name\r\n        binding.characterDataLocationName = character.location.name\r\n    }\r\n\r\n    private fun updateFavoriteIcon(isFavorite: Boolean?){\r\n        characterFavorite.setImageResource(\r\n            if (isFavorite != null && isFavorite) {\r\n                R.drawable.ic_favorite\r\n            } else {\r\n                R.drawable.ic_favorite_border\r\n            }\r\n        )\r\n    }\r\n\r\n    private fun validateEvents(event: Event<CharacterDetailNavigation>?) {\r\n        event?.getContentIfNotHandled()?.let { navigation ->\r\n            when (navigation) {\r\n                is ShowEpisodeError -> navigation.run {\r\n                    this@CharacterDetailActivity.showLongToast(\"Error -> ${error.message}\")\r\n                }\r\n                is ShowEpisodeList -> navigation.run {\r\n                    episodeListAdapter.updateData(episodeList)\r\n                }\r\n                CloseActivity -> {\r\n                    this@CharacterDetailActivity.showLongToast(R.string.error_no_character_data)\r\n                    finish()\r\n                }\r\n                HideEpisodeListLoading -> {\r\n                    episodeProgressBar.isVisible = false\r\n                }\r\n                ShowEpisodeListLoading -> {\r\n                    episodeProgressBar.isVisible = true\r\n                }\r\n            }\r\n        }\r\n    }\r\n\r\n    //endregion\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/kotlin/com/platzi/android/rickandmorty/ui/CharacterDetailActivity.kt	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ app/src/main/kotlin/com/platzi/android/rickandmorty/ui/CharacterDetailActivity.kt	(date 1604252352015)
+@@ -9,9 +9,15 @@
+ import com.platzi.android.rickandmorty.R
+ import com.platzi.android.rickandmorty.adapters.EpisodeListAdapter
+ import com.platzi.android.rickandmorty.api.APIConstants.BASE_API_URL
++import com.platzi.android.rickandmorty.api.CharacterRequest
++import com.platzi.android.rickandmorty.api.CharacterRetrofitDataSource
+ import com.platzi.android.rickandmorty.api.EpisodeRequest
++import com.platzi.android.rickandmorty.data.CharacterRepository
++import com.platzi.android.rickandmorty.data.LocalCharacterDataSource
++import com.platzi.android.rickandmorty.data.RemoteCharacterDataSource
+ import com.platzi.android.rickandmorty.database.CharacterDao
+ import com.platzi.android.rickandmorty.database.CharacterDatabase
++import com.platzi.android.rickandmorty.database.CharacterRoomDaSource
+ import com.platzi.android.rickandmorty.databinding.ActivityCharacterDetailBinding
+ import com.platzi.android.rickandmorty.domain.Character
+ import com.platzi.android.rickandmorty.parcelables.CharacterParcelable
+@@ -40,20 +46,28 @@
+         EpisodeRequest(BASE_API_URL)
+     }
+ 
+-    private val characterDao: CharacterDao by lazy {
+-        CharacterDatabase.getDatabase(application).characterDao()
++    private val characterRequest: CharacterRequest by lazy {
++        CharacterRequest(BASE_API_URL)
+     }
+-
+     private val getEpisodeFromCharacterUseCase: GetEpisodeFromCharacterUseCase by lazy {
+         GetEpisodeFromCharacterUseCase(episodeRequest)
+     }
++    private val remoteCharacterDataSource: RemoteCharacterDataSource by lazy {
++        CharacterRetrofitDataSource(characterRequest)
++    }
++    private val localCharacterDataSource: LocalCharacterDataSource by lazy {
++        CharacterRoomDaSource(CharacterDatabase.getDatabase(applicationContext))
++    }
+ 
++    private val characterRepository: CharacterRepository by lazy {
++        CharacterRepository(remoteCharacterDataSource,localCharacterDataSource)
++    }
+     private val getFavoriteCharacterStatusUseCase: GetFavoriteCharacterStatusUseCase by lazy {
+-        GetFavoriteCharacterStatusUseCase(characterDao)
++        GetFavoriteCharacterStatusUseCase(characterRepository)
+     }
+ 
+     private val updateFavoriteCharacterStatusUseCase: UpdateFavoriteCharacterStatusUseCase by lazy {
+-        UpdateFavoriteCharacterStatusUseCase(characterDao)
++        UpdateFavoriteCharacterStatusUseCase(characterRepository)
+     }
+ 
+     private val characterDetailViewModel: CharacterDetailViewModel by lazy {
+Index: app/src/main/kotlin/com/platzi/android/rickandmorty/ui/FavoriteListFragment.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.platzi.android.rickandmorty.ui\r\n\r\nimport android.content.Context\r\nimport android.os.Bundle\r\nimport android.view.LayoutInflater\r\nimport android.view.View\r\nimport android.view.ViewGroup\r\nimport androidx.core.view.isVisible\r\nimport androidx.databinding.DataBindingUtil\r\nimport androidx.fragment.app.Fragment\r\nimport androidx.lifecycle.Observer\r\nimport com.platzi.android.rickandmorty.R\r\nimport com.platzi.android.rickandmorty.adapters.FavoriteListAdapter\r\nimport com.platzi.android.rickandmorty.database.CharacterDao\r\nimport com.platzi.android.rickandmorty.database.CharacterDatabase\r\nimport com.platzi.android.rickandmorty.databinding.FragmentFavoriteListBinding\r\nimport com.platzi.android.rickandmorty.domain.Character\r\nimport com.platzi.android.rickandmorty.presentation.FavoriteListViewModel\r\nimport com.platzi.android.rickandmorty.presentation.FavoriteListViewModel.FavoriteListNavigation\r\nimport com.platzi.android.rickandmorty.presentation.FavoriteListViewModel.FavoriteListNavigation.ShowCharacterList\r\nimport com.platzi.android.rickandmorty.presentation.FavoriteListViewModel.FavoriteListNavigation.ShowEmptyListMessage\r\nimport com.platzi.android.rickandmorty.presentation.utils.Event\r\nimport com.platzi.android.rickandmorty.usecases.GetAllFavoriteCharactersUseCase\r\nimport com.platzi.android.rickandmorty.utils.getViewModel\r\nimport com.platzi.android.rickandmorty.utils.setItemDecorationSpacing\r\nimport kotlinx.android.synthetic.main.fragment_favorite_list.*\r\n\r\nclass FavoriteListFragment : Fragment() {\r\n\r\n    //region Fields\r\n\r\n    private lateinit var favoriteListAdapter: FavoriteListAdapter\r\n    private lateinit var listener: OnFavoriteListFragmentListener\r\n\r\n    private val characterDao: CharacterDao by lazy {\r\n        CharacterDatabase.getDatabase(activity!!.applicationContext).characterDao()\r\n    }\r\n\r\n    private val getAllFavoriteCharactersUseCase: GetAllFavoriteCharactersUseCase by lazy {\r\n        GetAllFavoriteCharactersUseCase(characterDao)\r\n    }\r\n\r\n    private val favoriteListViewModel: FavoriteListViewModel by lazy {\r\n        getViewModel { FavoriteListViewModel(getAllFavoriteCharactersUseCase) }\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Override Methods & Callbacks\r\n\r\n    override fun onAttach(context: Context) {\r\n        super.onAttach(context)\r\n        try{\r\n            listener = context as OnFavoriteListFragmentListener\r\n        }catch (e: ClassCastException){\r\n            throw ClassCastException(\"$context must implement OnFavoriteListFragmentListener\")\r\n        }\r\n    }\r\n\r\n    override fun onCreateView(\r\n        inflater: LayoutInflater,\r\n        container: ViewGroup?,\r\n        savedInstanceState: Bundle?\r\n    ): View? {\r\n        return DataBindingUtil.inflate<FragmentFavoriteListBinding>(\r\n            inflater,\r\n            R.layout.fragment_favorite_list,\r\n            container,\r\n            false\r\n        ).apply {\r\n            lifecycleOwner = this@FavoriteListFragment\r\n        }.root\r\n    }\r\n\r\n    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {\r\n        super.onViewCreated(view, savedInstanceState)\r\n\r\n        favoriteListAdapter = FavoriteListAdapter { character ->\r\n            listener.openCharacterDetail(character)\r\n        }\r\n        favoriteListAdapter.setHasStableIds(true)\r\n\r\n        rvFavoriteList.run {\r\n            setItemDecorationSpacing(resources.getDimension(R.dimen.list_item_padding))\r\n            adapter = favoriteListAdapter\r\n        }\r\n\r\n        favoriteListViewModel.favoriteCharacterList.observe(this, Observer(favoriteListViewModel::onFavoriteCharacterList))\r\n        favoriteListViewModel.events.observe(this, Observer(this::validateEvents))\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Private Methods\r\n\r\n    private fun validateEvents(event: Event<FavoriteListNavigation>?) {\r\n        event?.getContentIfNotHandled()?.let { navigation ->\r\n            when (navigation) {\r\n                is ShowCharacterList -> navigation.run {\r\n                    tvEmptyListMessage.isVisible = false\r\n                    favoriteListAdapter.updateData(characterList)\r\n                }\r\n                ShowEmptyListMessage -> {\r\n                    tvEmptyListMessage.isVisible = true\r\n                    favoriteListAdapter.updateData(emptyList())\r\n                }\r\n            }\r\n        }\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Inner Classes & Interfaces\r\n\r\n    interface OnFavoriteListFragmentListener {\r\n        fun openCharacterDetail(character: Character)\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Companion object\r\n\r\n    companion object {\r\n\r\n        fun newInstance(args: Bundle? = Bundle()) = FavoriteListFragment().apply {\r\n            arguments = args\r\n        }\r\n    }\r\n\r\n    //endregion\r\n\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/kotlin/com/platzi/android/rickandmorty/ui/FavoriteListFragment.kt	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ app/src/main/kotlin/com/platzi/android/rickandmorty/ui/FavoriteListFragment.kt	(date 1604251938431)
+@@ -11,8 +11,16 @@
+ import androidx.lifecycle.Observer
+ import com.platzi.android.rickandmorty.R
+ import com.platzi.android.rickandmorty.adapters.FavoriteListAdapter
++import com.platzi.android.rickandmorty.api.APIConstants
++import com.platzi.android.rickandmorty.api.APIConstants.BASE_API_URL
++import com.platzi.android.rickandmorty.api.CharacterRequest
++import com.platzi.android.rickandmorty.api.CharacterRetrofitDataSource
++import com.platzi.android.rickandmorty.data.CharacterRepository
++import com.platzi.android.rickandmorty.data.LocalCharacterDataSource
++import com.platzi.android.rickandmorty.data.RemoteCharacterDataSource
+ import com.platzi.android.rickandmorty.database.CharacterDao
+ import com.platzi.android.rickandmorty.database.CharacterDatabase
++import com.platzi.android.rickandmorty.database.CharacterRoomDaSource
+ import com.platzi.android.rickandmorty.databinding.FragmentFavoriteListBinding
+ import com.platzi.android.rickandmorty.domain.Character
+ import com.platzi.android.rickandmorty.presentation.FavoriteListViewModel
+@@ -35,9 +43,23 @@
+     private val characterDao: CharacterDao by lazy {
+         CharacterDatabase.getDatabase(activity!!.applicationContext).characterDao()
+     }
++    private val characterRequest: CharacterRequest by lazy {
++        CharacterRequest(BASE_API_URL)
++    }
++
++    private val remoteCharacterDataSource: RemoteCharacterDataSource by lazy {
++        CharacterRetrofitDataSource(characterRequest )
++    }
++
++    private val localCharacterDataSource: LocalCharacterDataSource by lazy {
++        CharacterRoomDaSource(CharacterDatabase.getDatabase(activity!!.applicationContext))
++    }
++    private val repository: CharacterRepository by lazy {
++        CharacterRepository(remoteCharacterDataSource,localCharacterDataSource)
++    }
+ 
+     private val getAllFavoriteCharactersUseCase: GetAllFavoriteCharactersUseCase by lazy {
+-        GetAllFavoriteCharactersUseCase(characterDao)
++        GetAllFavoriteCharactersUseCase(repository)
+     }
+ 
+     private val favoriteListViewModel: FavoriteListViewModel by lazy {
+Index: app/src/main/kotlin/com/platzi/android/rickandmorty/ui/CharacterListFragment.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.platzi.android.rickandmorty.ui\r\n\r\nimport android.content.Context\r\nimport android.os.Bundle\r\nimport android.view.LayoutInflater\r\nimport android.view.View\r\nimport android.view.ViewGroup\r\nimport androidx.databinding.DataBindingUtil\r\nimport androidx.fragment.app.Fragment\r\nimport androidx.lifecycle.Observer\r\nimport androidx.recyclerview.widget.GridLayoutManager\r\nimport androidx.recyclerview.widget.RecyclerView\r\nimport com.platzi.android.rickandmorty.R\r\nimport com.platzi.android.rickandmorty.adapters.CharacterGridAdapter\r\nimport com.platzi.android.rickandmorty.api.APIConstants.BASE_API_URL\r\nimport com.platzi.android.rickandmorty.api.CharacterRequest\r\nimport com.platzi.android.rickandmorty.api.CharacterRetrofitDataSource\r\nimport com.platzi.android.rickandmorty.data.CharacterRepository\r\nimport com.platzi.android.rickandmorty.data.RemoteCharacterDataSource\r\nimport com.platzi.android.rickandmorty.databinding.FragmentCharacterListBinding\r\nimport com.platzi.android.rickandmorty.domain.Character\r\nimport com.platzi.android.rickandmorty.presentation.CharacterListViewModel\r\nimport com.platzi.android.rickandmorty.presentation.CharacterListViewModel.CharacterListNavigation\r\nimport com.platzi.android.rickandmorty.presentation.CharacterListViewModel.CharacterListNavigation.*\r\nimport com.platzi.android.rickandmorty.presentation.utils.Event\r\nimport com.platzi.android.rickandmorty.usecases.GetAllCharactersUseCase\r\nimport com.platzi.android.rickandmorty.utils.getViewModel\r\nimport com.platzi.android.rickandmorty.utils.setItemDecorationSpacing\r\nimport com.platzi.android.rickandmorty.utils.showLongToast\r\nimport kotlinx.android.synthetic.main.fragment_character_list.*\r\n\r\n\r\nclass CharacterListFragment : Fragment() {\r\n\r\n    //region Fields\r\n\r\n    private lateinit var characterGridAdapter: CharacterGridAdapter\r\n    private lateinit var listener: OnCharacterListFragmentListener\r\n\r\n    private val characterRequest: CharacterRequest by lazy {\r\n        CharacterRequest(BASE_API_URL)\r\n    }\r\n\r\n    private val remoteCharacterDataSource: RemoteCharacterDataSource by lazy {\r\n        CharacterRetrofitDataSource(characterRequest)\r\n    }\r\n\r\n    private val characterRepository: CharacterRepository by lazy {\r\n        CharacterRepository(remoteCharacterDataSource)\r\n    }\r\n\r\n    private val getAllCharactersUseCase: GetAllCharactersUseCase by lazy {\r\n        GetAllCharactersUseCase(characterRepository)\r\n    }\r\n\r\n    private val characterListViewModel: CharacterListViewModel by lazy {\r\n        getViewModel { CharacterListViewModel(getAllCharactersUseCase) }\r\n    }\r\n\r\n    private val onScrollListener: RecyclerView.OnScrollListener by lazy {\r\n        object: RecyclerView.OnScrollListener() {\r\n            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {\r\n                super.onScrolled(recyclerView, dx, dy)\r\n\r\n                val layoutManager = recyclerView.layoutManager as GridLayoutManager\r\n                val visibleItemCount: Int = layoutManager.childCount\r\n                val totalItemCount: Int = layoutManager.itemCount\r\n                val firstVisibleItemPosition: Int = layoutManager.findFirstVisibleItemPosition()\r\n\r\n                characterListViewModel.onLoadMoreItems(visibleItemCount, firstVisibleItemPosition, totalItemCount)\r\n            }\r\n        }\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Override Methods & Callbacks\r\n\r\n    override fun onAttach(context: Context) {\r\n        super.onAttach(context)\r\n        try{\r\n            listener = context as OnCharacterListFragmentListener\r\n        }catch (e: ClassCastException){\r\n            throw ClassCastException(\"$context must implement OnCharacterListFragmentListener\")\r\n        }\r\n    }\r\n\r\n    override fun onCreateView(\r\n        inflater: LayoutInflater,\r\n        container: ViewGroup?,\r\n        savedInstanceState: Bundle?\r\n    ): View? {\r\n        return DataBindingUtil.inflate<FragmentCharacterListBinding>(\r\n            inflater,\r\n            R.layout.fragment_character_list,\r\n            container,\r\n            false\r\n        ).apply {\r\n            lifecycleOwner = this@CharacterListFragment\r\n        }.root\r\n    }\r\n\r\n    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {\r\n        super.onViewCreated(view, savedInstanceState)\r\n\r\n        characterGridAdapter = CharacterGridAdapter { character ->\r\n            listener.openCharacterDetail(character)\r\n        }.also {\r\n            setHasOptionsMenu(true)\r\n        }\r\n\r\n        rvCharacterList.run{\r\n            addOnScrollListener(onScrollListener)\r\n            setItemDecorationSpacing(resources.getDimension(R.dimen.list_item_padding))\r\n\r\n            adapter = characterGridAdapter\r\n        }\r\n\r\n        srwCharacterList.setOnRefreshListener {\r\n            characterListViewModel.onRetryGetAllCharacter(rvCharacterList.adapter?.itemCount ?: 0)\r\n        }\r\n\r\n        characterListViewModel.events.observe(this, Observer(this::validateEvents))\r\n\r\n        characterListViewModel.onGetAllCharacters()\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Private Methods\r\n\r\n    private fun validateEvents(event: Event<CharacterListNavigation>?) {\r\n        event?.getContentIfNotHandled()?.let { navigation ->\r\n            when(navigation) {\r\n                is ShowCharacterError -> navigation.run {\r\n                    context?.showLongToast(\"Error -> ${error.message}\")\r\n                }\r\n                is ShowCharacterList -> navigation.run {\r\n                    characterGridAdapter.addData(characterList)\r\n                }\r\n                HideLoading -> {\r\n                    srwCharacterList.isRefreshing = false\r\n                }\r\n                ShowLoading -> {\r\n                    srwCharacterList.isRefreshing = true\r\n                }\r\n            }\r\n        }\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Inner Classes & Interfaces\r\n\r\n    interface OnCharacterListFragmentListener {\r\n        fun openCharacterDetail(character: Character)\r\n    }\r\n\r\n    //endregion\r\n\r\n    //region Companion object\r\n\r\n    companion object {\r\n\r\n        fun newInstance(args: Bundle? = Bundle()) = CharacterListFragment().apply {\r\n            arguments = args\r\n        }\r\n    }\r\n\r\n    //endregion\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/kotlin/com/platzi/android/rickandmorty/ui/CharacterListFragment.kt	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ app/src/main/kotlin/com/platzi/android/rickandmorty/ui/CharacterListFragment.kt	(date 1604252020525)
+@@ -16,7 +16,10 @@
+ import com.platzi.android.rickandmorty.api.CharacterRequest
+ import com.platzi.android.rickandmorty.api.CharacterRetrofitDataSource
+ import com.platzi.android.rickandmorty.data.CharacterRepository
++import com.platzi.android.rickandmorty.data.LocalCharacterDataSource
+ import com.platzi.android.rickandmorty.data.RemoteCharacterDataSource
++import com.platzi.android.rickandmorty.database.CharacterDatabase
++import com.platzi.android.rickandmorty.database.CharacterRoomDaSource
+ import com.platzi.android.rickandmorty.databinding.FragmentCharacterListBinding
+ import com.platzi.android.rickandmorty.domain.Character
+ import com.platzi.android.rickandmorty.presentation.CharacterListViewModel
+@@ -44,9 +47,12 @@
+     private val remoteCharacterDataSource: RemoteCharacterDataSource by lazy {
+         CharacterRetrofitDataSource(characterRequest)
+     }
++    private val localCharacterDataSource: LocalCharacterDataSource by lazy {
++        CharacterRoomDaSource(CharacterDatabase.getDatabase(activity!!.applicationContext))
++    }
+ 
+     private val characterRepository: CharacterRepository by lazy {
+-        CharacterRepository(remoteCharacterDataSource)
++        CharacterRepository(remoteCharacterDataSource,localCharacterDataSource)
+     }
+ 
+     private val getAllCharactersUseCase: GetAllCharactersUseCase by lazy {
+Index: app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/UpdateFavoriteCharacterStatusUseCase.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.platzi.android.rickandmorty.usecases\r\n\r\nimport com.platzi.android.rickandmorty.database.CharacterDao\r\nimport com.platzi.android.rickandmorty.database.toCharacterEntity\r\nimport com.platzi.android.rickandmorty.domain.Character\r\nimport io.reactivex.Maybe\r\nimport io.reactivex.android.schedulers.AndroidSchedulers\r\nimport io.reactivex.schedulers.Schedulers\r\n\r\nclass UpdateFavoriteCharacterStatusUseCase(\r\n    private val characterDao: CharacterDao\r\n) {\r\n\r\n    fun invoke(character: Character): Maybe<Boolean> {\r\n        val characterEntity = character.toCharacterEntity()\r\n        return characterDao.getCharacterById(characterEntity.id)\r\n            .isEmpty\r\n            .flatMapMaybe { isEmpty ->\r\n                if(isEmpty){\r\n                    characterDao.insertCharacter(characterEntity)\r\n                }else{\r\n                    characterDao.deleteCharacter(characterEntity)\r\n                }\r\n                Maybe.just(isEmpty)\r\n            }\r\n            .observeOn(AndroidSchedulers.mainThread())\r\n            .subscribeOn(Schedulers.io())\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/UpdateFavoriteCharacterStatusUseCase.kt	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/UpdateFavoriteCharacterStatusUseCase.kt	(date 1604251473223)
+@@ -1,5 +1,6 @@
+ package com.platzi.android.rickandmorty.usecases
+ 
++import com.platzi.android.rickandmorty.data.CharacterRepository
+ import com.platzi.android.rickandmorty.database.CharacterDao
+ import com.platzi.android.rickandmorty.database.toCharacterEntity
+ import com.platzi.android.rickandmorty.domain.Character
+@@ -8,22 +9,9 @@
+ import io.reactivex.schedulers.Schedulers
+ 
+ class UpdateFavoriteCharacterStatusUseCase(
+-    private val characterDao: CharacterDao
++    private val characterRepository: CharacterRepository
+ ) {
+ 
+-    fun invoke(character: Character): Maybe<Boolean> {
+-        val characterEntity = character.toCharacterEntity()
+-        return characterDao.getCharacterById(characterEntity.id)
+-            .isEmpty
+-            .flatMapMaybe { isEmpty ->
+-                if(isEmpty){
+-                    characterDao.insertCharacter(characterEntity)
+-                }else{
+-                    characterDao.deleteCharacter(characterEntity)
+-                }
+-                Maybe.just(isEmpty)
+-            }
+-            .observeOn(AndroidSchedulers.mainThread())
+-            .subscribeOn(Schedulers.io())
+-    }
++    fun invoke(character: Character): Maybe<Boolean> =
++        characterRepository.updateFavoriteCharacterStatus(character)
+ }
+Index: data/src/main/java/com/platzi/android/rickandmorty/data/Repositories.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.platzi.android.rickandmorty.data\r\n\r\nimport com.platzi.android.rickandmorty.domain.Character\r\nimport io.reactivex.Flowable\r\nimport io.reactivex.Maybe\r\nimport io.reactivex.Single\r\n\r\nclass CharacterRepository(\r\n    private val remoteCharacterDataSource: RemoteCharacterDataSource\r\n) {\r\n\r\n    //region Public Methods\r\n\r\n    fun getAllCharacters(page: Int): Single<List<Character>> =\r\n        remoteCharacterDataSource.getAllCharacters(page)\r\n\r\n    //endregion\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- data/src/main/java/com/platzi/android/rickandmorty/data/Repositories.kt	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ data/src/main/java/com/platzi/android/rickandmorty/data/Repositories.kt	(date 1603948487439)
+@@ -1,18 +1,18 @@
+ package com.platzi.android.rickandmorty.data
+ 
++import com.acuscorp.data.RemoteCharacterDataSource
+ import com.platzi.android.rickandmorty.domain.Character
+ import io.reactivex.Flowable
+ import io.reactivex.Maybe
+ import io.reactivex.Single
+ 
+ class CharacterRepository(
+-    private val remoteCharacterDataSource: RemoteCharacterDataSource
+-) {
+-
+-    //region Public Methods
++    private val remoteCharacterDataSource: RemoteCharacterDataSource,
++    private val localCharacterDataSource: LocalCharacterDataSource
++){
++    fun getAllCharacters(page: Int) =  remoteCharacterDataSource.getAllCharacters(page)
+ 
+-    fun getAllCharacters(page: Int): Single<List<Character>> =
+-        remoteCharacterDataSource.getAllCharacters(page)
+-
+-    //endregion
+-}
++    fun getAllFavoriteCharacters() = localCharacterDataSource.getAllFavoriteCharacters()
++    fun getFavoriteCharacterStatus(id: Int) = localCharacterDataSource.getFavoriteCharacterStatus(id)
++    fun updateFavoriteCharacterStatus(character: Character) = localCharacterDataSource.updateFavoriteCharacterStatus(character)
++}
+\ No newline at end of file
+Index: app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/GetFavoriteCharacterStatusUseCase.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.platzi.android.rickandmorty.usecases\r\n\r\nimport com.platzi.android.rickandmorty.database.CharacterDao\r\nimport io.reactivex.Maybe\r\nimport io.reactivex.android.schedulers.AndroidSchedulers\r\nimport io.reactivex.schedulers.Schedulers\r\n\r\nclass GetFavoriteCharacterStatusUseCase(\r\n    private val characterDao: CharacterDao\r\n) {\r\n\r\n    fun invoke(characterId: Int): Maybe<Boolean> {\r\n        return characterDao.getCharacterById(characterId)\r\n            .isEmpty\r\n            .flatMapMaybe { isEmpty ->\r\n                Maybe.just(!isEmpty)\r\n            }\r\n            .observeOn(AndroidSchedulers.mainThread())\r\n            .subscribeOn(Schedulers.io())\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/GetFavoriteCharacterStatusUseCase.kt	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/GetFavoriteCharacterStatusUseCase.kt	(date 1604251277575)
+@@ -1,21 +1,15 @@
+ package com.platzi.android.rickandmorty.usecases
+ 
++import com.platzi.android.rickandmorty.data.CharacterRepository
+ import com.platzi.android.rickandmorty.database.CharacterDao
+ import io.reactivex.Maybe
+ import io.reactivex.android.schedulers.AndroidSchedulers
+ import io.reactivex.schedulers.Schedulers
+ 
+ class GetFavoriteCharacterStatusUseCase(
+-    private val characterDao: CharacterDao
++    private val characterRepository: CharacterRepository
+ ) {
+ 
+-    fun invoke(characterId: Int): Maybe<Boolean> {
+-        return characterDao.getCharacterById(characterId)
+-            .isEmpty
+-            .flatMapMaybe { isEmpty ->
+-                Maybe.just(!isEmpty)
+-            }
+-            .observeOn(AndroidSchedulers.mainThread())
+-            .subscribeOn(Schedulers.io())
+-    }
++    fun invoke(characterId: Int): Maybe<Boolean> =
++        characterRepository.getFavoriteCharacterStatus(characterId)
+ }
+Index: data/src/main/java/com/platzi/android/rickandmorty/data/DataSources.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.platzi.android.rickandmorty.data\r\n\r\nimport com.platzi.android.rickandmorty.domain.Character\r\nimport io.reactivex.Single\r\n\r\ninterface RemoteCharacterDataSource {\r\n    fun getAllCharacters(page: Int): Single<List<Character>>\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- data/src/main/java/com/platzi/android/rickandmorty/data/DataSources.kt	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ data/src/main/java/com/platzi/android/rickandmorty/data/DataSources.kt	(date 1603948280683)
+@@ -1,8 +1,16 @@
+ package com.platzi.android.rickandmorty.data
+ 
+ import com.platzi.android.rickandmorty.domain.Character
++import io.reactivex.Flowable
++import io.reactivex.Maybe
+ import io.reactivex.Single
+ 
+ interface RemoteCharacterDataSource {
+     fun getAllCharacters(page: Int): Single<List<Character>>
+ }
++
++interface LocalCharacterDataSource {
++    fun getAllFavoriteCharacters(): Flowable<List<Character>>
++    fun getFavoriteCharacterStatus(id: Int): Maybe<Boolean>
++    fun updateFavoriteCharacterStatus(character: Character): Maybe<Boolean>
++}
+Index: .idea/compiler.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"CompilerConfiguration\">\r\n    <bytecodeTargetLevel>\r\n      <module name=\"domain\" target=\"1.7\" />\r\n    </bytecodeTargetLevel>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/compiler.xml	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ .idea/compiler.xml	(date 1603947735959)
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
+   <component name="CompilerConfiguration">
+-    <bytecodeTargetLevel>
++    <bytecodeTargetLevel target="1.8">
+       <module name="domain" target="1.7" />
+     </bytecodeTargetLevel>
+   </component>
+Index: gradle/wrapper/gradle-wrapper.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>#Sun Jun 28 20:11:20 CDT 2020\r\ndistributionBase=GRADLE_USER_HOME\r\ndistributionPath=wrapper/dists\r\nzipStoreBase=GRADLE_USER_HOME\r\nzipStorePath=wrapper/dists\r\ndistributionUrl=https\\://services.gradle.org/distributions/gradle-6.1.1-all.zip\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>windows-1252
+===================================================================
+--- gradle/wrapper/gradle-wrapper.properties	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ gradle/wrapper/gradle-wrapper.properties	(date 1603947735971)
+@@ -1,6 +1,6 @@
+-#Sun Jun 28 20:11:20 CDT 2020
++#Wed Oct 28 22:55:53 CST 2020
+ distributionBase=GRADLE_USER_HOME
+ distributionPath=wrapper/dists
+ zipStoreBase=GRADLE_USER_HOME
+ zipStorePath=wrapper/dists
+-distributionUrl=https\://services.gradle.org/distributions/gradle-6.1.1-all.zip
++distributionUrl=https\://services.gradle.org/distributions/gradle-6.5-bin.zip
+Index: data/src/androidTest/java/com/acuscorp/data/ExampleInstrumentedTest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- data/src/androidTest/java/com/acuscorp/data/ExampleInstrumentedTest.kt	(date 1603947736006)
++++ data/src/androidTest/java/com/acuscorp/data/ExampleInstrumentedTest.kt	(date 1603947736006)
+@@ -0,0 +1,24 @@
++package com.acuscorp.data
++
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.ext.junit.runners.AndroidJUnit4
++
++import org.junit.Test
++import org.junit.runner.RunWith
++
++import org.junit.Assert.*
++
++/**
++ * Instrumented test, which will execute on an Android device.
++ *
++ * See [testing documentation](http://d.android.com/tools/testing).
++ */
++@RunWith(AndroidJUnit4::class)
++class ExampleInstrumentedTest {
++    @Test
++    fun useAppContext() {
++        // Context of the app under test.
++        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
++        assertEquals("com.acuscorp.data.test", appContext.packageName)
++    }
++}
+\ No newline at end of file
+Index: build.gradle
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>// Top-level build file where you can add configuration options common to all sub-projects/modules.\r\n\r\nbuildscript {\r\n    ext.kotlin_version = '1.3.72'\r\n    ext.mockK_version = '1.9.3'\r\n    repositories {\r\n        google()\r\n        jcenter()\r\n        \r\n    }\r\n    dependencies {\r\n        classpath 'com.android.tools.build:gradle:4.0.1'\r\n        classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version\"\r\n\r\n        // NOTE: Do not place your application dependencies here; they belong\r\n        // in the individual module build.gradle files\r\n    }\r\n}\r\n\r\nallprojects {\r\n    repositories {\r\n        google()\r\n        jcenter()\r\n        \r\n    }\r\n}\r\n\r\next{\r\n    //SDK & Tools\r\n    minSdkVersion = 21\r\n    targetSdkVersion = 29\r\n    compileSdkVersion = 29\r\n    versionCode = 1\r\n    versionName = \"1.0\"\r\n\r\n    //Versions\r\n    appCompatVersion = '1.1.0'\r\n    cardViewVersion = '1.0.0'\r\n    constraintLayoutVersion = '1.1.3'\r\n    coreKTXVersion = '1.3.0'\r\n    coreTestingVersion = '1.1.1'\r\n    daggerVersion = '2.28'\r\n    glideVersion = '4.11.0'\r\n    gsonVersion = '2.8.6'\r\n    jUnitVersion = '4.13'\r\n    materialVersion = '1.1.0'\r\n    mockitoKotlinInlineVersion = '3.3.3'\r\n    mockitoKotlinVersion = '2.2.0'\r\n    okHttpLoggingInterceptorVersion = '4.7.2'\r\n    pagingVersion = '2.1.2'\r\n    reactiveStreamsVersion = '2.2.0'\r\n    recyclerViewVersion = '1.1.0'\r\n    retrofitVersion = '2.9.0'\r\n    roomVersion = '2.2.5'\r\n    rxAndroidVersion = '2.1.1'\r\n    rxJavaVersion = '2.2.19'\r\n    swipeRefreshLayoutVersion = '1.1.0'\r\n    viewPagerVersion = '1.0.0'\r\n\r\n    //Core Testing\r\n    coreTestingLib = \"android.arch.core:core-testing:$coreTestingVersion\"\r\n\r\n    //Dagger\r\n    daggerCompiler = \"com.google.dagger:dagger-compiler:$daggerVersion\"\r\n    daggerLib = \"com.google.dagger:dagger:$daggerVersion\"\r\n\r\n    //Glide\r\n    glideCompiler = \"com.github.bumptech.glide:compiler:$glideVersion\"\r\n    glideLib = \"com.github.bumptech.glide:glide:$glideVersion\"\r\n\r\n    //Gson\r\n    gsonLib = \"com.google.code.gson:gson:$gsonVersion\"\r\n\r\n    //JUnit\r\n    jUnitLib = \"junit:junit:$jUnitVersion\"\r\n\r\n    //Kotlin\r\n    kotlinLib = \"org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version\"\r\n\r\n    //KTX\r\n    ktxLib = \"androidx.core:core-ktx:$coreKTXVersion\"\r\n\r\n    //Material\r\n    materialLib = \"com.google.android.material:material:$materialVersion\"\r\n\r\n    //Mockito\r\n    mockitoLib = \"com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion\"\r\n    mockitoInlineLib = \"org.mockito:mockito-inline:$mockitoKotlinInlineVersion\"\r\n\r\n    //OkHttp\r\n    okHttpInterceptorLib = \"com.squareup.okhttp3:logging-interceptor:$okHttpLoggingInterceptorVersion\"\r\n\r\n    //Reactive Streams\r\n    reactiveStreamsLib = \"androidx.lifecycle:lifecycle-reactivestreams-ktx:$reactiveStreamsVersion\"\r\n\r\n    //Retrofit\r\n    retrofitGsonLib = \"com.squareup.retrofit2:converter-gson:$retrofitVersion\"\r\n    retrofitRxJavaLib = \"com.squareup.retrofit2:adapter-rxjava2:$retrofitVersion\"\r\n\r\n    //Room\r\n    roomCompiler = \"androidx.room:room-compiler:$roomVersion\"\r\n    roomLib = \"androidx.room:room-runtime:$roomVersion\"\r\n    roomRxJavaLib = \"androidx.room:room-rxjava2:$roomVersion\"\r\n\r\n    //Rx\r\n    rxAndroidLib = \"io.reactivex.rxjava2:rxandroid:$rxAndroidVersion\"\r\n    rxJavaLib = \"io.reactivex.rxjava2:rxjava:$rxJavaVersion\"\r\n\r\n    //Views\r\n    appCompatLib = \"androidx.appcompat:appcompat:$appCompatVersion\"\r\n    cardViewLib = \"androidx.cardview:cardview:$cardViewVersion\"\r\n    constraintLayoutLib = \"androidx.constraintlayout:constraintlayout:$constraintLayoutVersion\"\r\n    recyclerViewLib = \"androidx.recyclerview:recyclerview:$recyclerViewVersion\"\r\n    swipeRefreshLayoutLib = \"androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion\"\r\n    viewPagerLib = \"androidx.viewpager2:viewpager2:$viewPagerVersion\"\r\n}\r\n\r\ntask clean(type: Delete) {\r\n    delete rootProject.buildDir\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- build.gradle	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ build.gradle	(date 1603947735980)
+@@ -9,7 +9,7 @@
+         
+     }
+     dependencies {
+-        classpath 'com.android.tools.build:gradle:4.0.1'
++        classpath 'com.android.tools.build:gradle:4.1.0'
+         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+ 
+         // NOTE: Do not place your application dependencies here; they belong
+Index: data/src/test/java/com/acuscorp/data/ExampleUnitTest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- data/src/test/java/com/acuscorp/data/ExampleUnitTest.kt	(date 1603947736019)
++++ data/src/test/java/com/acuscorp/data/ExampleUnitTest.kt	(date 1603947736019)
+@@ -0,0 +1,17 @@
++package com.acuscorp.data
++
++import org.junit.Test
++
++import org.junit.Assert.*
++
++/**
++ * Example local unit test, which will execute on the development machine (host).
++ *
++ * See [testing documentation](http://d.android.com/tools/testing).
++ */
++class ExampleUnitTest {
++    @Test
++    fun addition_isCorrect() {
++        assertEquals(4, 2 + 2)
++    }
++}
+\ No newline at end of file
+Index: app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/GetAllFavoriteCharactersUseCase.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.platzi.android.rickandmorty.usecases\r\n\r\nimport com.platzi.android.rickandmorty.database.CharacterDao\r\nimport com.platzi.android.rickandmorty.database.CharacterEntity\r\nimport com.platzi.android.rickandmorty.database.toCharacterDomainList\r\nimport com.platzi.android.rickandmorty.domain.Character\r\nimport io.reactivex.Flowable\r\nimport io.reactivex.schedulers.Schedulers\r\n\r\nclass GetAllFavoriteCharactersUseCase(\r\n    private val characterDao: CharacterDao\r\n) {\r\n\r\n    fun invoke(): Flowable<List<Character>> = characterDao\r\n        .getAllFavoriteCharacters()\r\n        .map(List<CharacterEntity>::toCharacterDomainList)\r\n        .onErrorReturn { emptyList() }\r\n        .subscribeOn(Schedulers.io())\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/GetAllFavoriteCharactersUseCase.kt	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ app/src/main/kotlin/com/platzi/android/rickandmorty/usecases/GetAllFavoriteCharactersUseCase.kt	(date 1604251117644)
+@@ -1,5 +1,6 @@
+ package com.platzi.android.rickandmorty.usecases
+ 
++import com.platzi.android.rickandmorty.data.CharacterRepository
+ import com.platzi.android.rickandmorty.database.CharacterDao
+ import com.platzi.android.rickandmorty.database.CharacterEntity
+ import com.platzi.android.rickandmorty.database.toCharacterDomainList
+@@ -8,12 +9,8 @@
+ import io.reactivex.schedulers.Schedulers
+ 
+ class GetAllFavoriteCharactersUseCase(
+-    private val characterDao: CharacterDao
++    private val characterRepository: CharacterRepository
+ ) {
+ 
+-    fun invoke(): Flowable<List<Character>> = characterDao
+-        .getAllFavoriteCharacters()
+-        .map(List<CharacterEntity>::toCharacterDomainList)
+-        .onErrorReturn { emptyList() }
+-        .subscribeOn(Schedulers.io())
++    fun invoke(): Flowable<List<Character>> = characterRepository.getAllFavoriteCharacters()
+ }
+Index: .idea/codeStyles/Project.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><component name=\"ProjectCodeStyleConfiguration\">\r\n  <code_scheme name=\"Project\" version=\"173\">\r\n    <JetCodeStyleSettings>\r\n      <option name=\"CODE_STYLE_DEFAULTS\" value=\"KOTLIN_OFFICIAL\" />\r\n    </JetCodeStyleSettings>\r\n    <codeStyleSettings language=\"XML\">\r\n      <indentOptions>\r\n        <option name=\"CONTINUATION_INDENT_SIZE\" value=\"4\" />\r\n      </indentOptions>\r\n      <arrangement>\r\n        <rules>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>xmlns:android</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>^$</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n            </rule>\r\n          </section>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>xmlns:.*</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>^$</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n              <order>BY_NAME</order>\r\n            </rule>\r\n          </section>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>.*:id</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>http://schemas.android.com/apk/res/android</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n            </rule>\r\n          </section>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>.*:name</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>http://schemas.android.com/apk/res/android</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n            </rule>\r\n          </section>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>name</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>^$</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n            </rule>\r\n          </section>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>style</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>^$</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n            </rule>\r\n          </section>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>.*</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>^$</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n              <order>BY_NAME</order>\r\n            </rule>\r\n          </section>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>.*</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>http://schemas.android.com/apk/res/android</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n              <order>ANDROID_ATTRIBUTE_ORDER</order>\r\n            </rule>\r\n          </section>\r\n          <section>\r\n            <rule>\r\n              <match>\r\n                <AND>\r\n                  <NAME>.*</NAME>\r\n                  <XML_ATTRIBUTE />\r\n                  <XML_NAMESPACE>.*</XML_NAMESPACE>\r\n                </AND>\r\n              </match>\r\n              <order>BY_NAME</order>\r\n            </rule>\r\n          </section>\r\n        </rules>\r\n      </arrangement>\r\n    </codeStyleSettings>\r\n    <codeStyleSettings language=\"kotlin\">\r\n      <option name=\"CODE_STYLE_DEFAULTS\" value=\"KOTLIN_OFFICIAL\" />\r\n    </codeStyleSettings>\r\n  </code_scheme>\r\n</component>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/codeStyles/Project.xml	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ .idea/codeStyles/Project.xml	(date 1604250984224)
+@@ -1,6 +1,22 @@
+ <component name="ProjectCodeStyleConfiguration">
+   <code_scheme name="Project" version="173">
+     <JetCodeStyleSettings>
++      <option name="PACKAGES_TO_USE_STAR_IMPORTS">
++        <value>
++          <package name="java.util" alias="false" withSubpackages="false" />
++          <package name="kotlinx.android.synthetic" alias="false" withSubpackages="true" />
++          <package name="io.ktor" alias="false" withSubpackages="true" />
++        </value>
++      </option>
++      <option name="PACKAGES_IMPORT_LAYOUT">
++        <value>
++          <package name="" alias="false" withSubpackages="true" />
++          <package name="java" alias="false" withSubpackages="true" />
++          <package name="javax" alias="false" withSubpackages="true" />
++          <package name="kotlin" alias="false" withSubpackages="true" />
++          <package name="" alias="true" withSubpackages="true" />
++        </value>
++      </option>
+       <option name="CODE_STYLE_DEFAULTS" value="KOTLIN_OFFICIAL" />
+     </JetCodeStyleSettings>
+     <codeStyleSettings language="XML">
+Index: app/src/main/kotlin/com/platzi/android/rickandmorty/database/DatabaseDataSources.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/kotlin/com/platzi/android/rickandmorty/database/DatabaseDataSources.kt	(date 1604251438176)
++++ app/src/main/kotlin/com/platzi/android/rickandmorty/database/DatabaseDataSources.kt	(date 1604251438176)
+@@ -0,0 +1,48 @@
++package com.platzi.android.rickandmorty.database
++
++import com.platzi.android.rickandmorty.data.LocalCharacterDataSource
++import com.platzi.android.rickandmorty.domain.Character
++import io.reactivex.Flowable
++import io.reactivex.Maybe
++import io.reactivex.android.schedulers.AndroidSchedulers
++import io.reactivex.schedulers.Schedulers
++
++class CharacterRoomDaSource(
++    database: CharacterDatabase
++) : LocalCharacterDataSource {
++    private val characterDao by lazy { database.characterDao() }
++
++    override fun getAllFavoriteCharacters(): Flowable<List<Character>> {
++        return characterDao
++            .getAllFavoriteCharacters()
++            .map(List<CharacterEntity>::toCharacterDomainList)
++            .onErrorReturn { emptyList() }
++            .subscribeOn(Schedulers.io())
++    }
++
++    override fun getFavoriteCharacterStatus(id: Int): Maybe<Boolean> {
++        return characterDao.getCharacterById(id)
++            .isEmpty
++            .flatMapMaybe { isEmpty ->
++                Maybe.just(!isEmpty)
++            }
++            .observeOn(AndroidSchedulers.mainThread())
++            .subscribeOn(Schedulers.io())
++    }
++
++    override fun updateFavoriteCharacterStatus(character: Character): Maybe<Boolean> {
++        val characterEntity = character.toCharacterEntity()
++        return characterDao.getCharacterById(characterEntity.id)
++            .isEmpty
++            .flatMapMaybe { isEmpty ->
++                if (isEmpty) {
++                    characterDao.insertCharacter(characterEntity)
++                } else {
++                    characterDao.deleteCharacter(characterEntity)
++                }
++                Maybe.just(isEmpty)
++            }
++            .observeOn(AndroidSchedulers.mainThread())
++            .subscribeOn(Schedulers.io())
++    }
++}
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"ProjectRootManager\" version=\"2\" languageLevel=\"JDK_1_7\" project-jdk-name=\"1.8\" project-jdk-type=\"JavaSDK\">\r\n    <output url=\"file://$PROJECT_DIR$/build/classes\" />\r\n  </component>\r\n  <component name=\"ProjectType\">\r\n    <option name=\"id\" value=\"Android\" />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/misc.xml	(revision 7b41ae4de943d8c8930dd8d975820c1175cbd8c5)
++++ .idea/misc.xml	(date 1603947736071)
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
+-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_7" project-jdk-name="1.8" project-jdk-type="JavaSDK">
++  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="true" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+     <output url="file://$PROJECT_DIR$/build/classes" />
+   </component>
+   <component name="ProjectType">
